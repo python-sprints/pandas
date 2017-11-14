@@ -2458,6 +2458,65 @@ def _grouped_plot_by_column(plotf, data, columns=None, by=None,
     return result
 
 
+class BokehSeriesPlotMethods(base.SeriesPlotMethods):
+
+    @property
+    def engine_name(self):
+        return 'bokeh'
+
+    def __call__(**kwds):
+        import logging
+        logging.error(kwds)
+
+
+class BokehFramePlotMethods(base.FramePlotMethods):
+    """
+    repro notebook:
+
+    import pandas as pd
+    import numpy as np
+    import bokeh
+    from bokeh.io import output_notebook, INLINE
+
+    output_notebook(hide_banner=True)
+    pd.set_option('plotting.engine', 'bokeh')
+    df = pd.DataFrame(np.random.rand(5, 3), columns='foo bar baz'.split())
+    df.plot()
+    """
+
+    @property
+    def engine_name(self):
+        return 'bokeh'
+
+    def __call__(self, x=None, y=None, kind='line', figure=None,
+                 use_index=True, title=None, grid=None,
+                 legend=True, style=None,
+                 fontsize=None, colormap=None,
+                 yerr=None, xerr=None,
+                 secondary_y=False, sort_columns=False, **kwds):
+
+        from bokeh.plotting import Figure, show
+        from bokeh.models import ColumnDataSource, HoverTool
+
+        df = self._data
+        source = ColumnDataSource(df)
+        hover_tool = HoverTool(
+            tooltips=[
+                ('index', '$index'),
+                ('(x,y)', '($x, $y)'),
+            ]
+        )
+        plot = Figure(
+            width=450,
+            height=300,
+            logo=None,
+            tools=[hover_tool]
+        )
+        for column in df.columns:
+            plot.line(x='index', y=column, source=source);
+        return show(plot)
+
+
 class MPLSeriesPlotMethods(base.SeriesPlotMethods):
     """Series plotting accessor and method
 
@@ -2845,3 +2904,6 @@ class MPLFramePlotMethods(base.FramePlotMethods):
 
 base.register_engine("matplotlib", 'series', MPLSeriesPlotMethods)
 base.register_engine("matplotlib", 'frame', MPLFramePlotMethods)
+
+base.register_engine('bokeh', 'series', BokehSeriesPlotMethods)
+base.register_engine('bokeh', 'frame', BokehFramePlotMethods)
